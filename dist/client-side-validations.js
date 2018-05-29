@@ -5,12 +5,115 @@
  */
 
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(require('jquery')) :
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('jquery')) :
   typeof define === 'function' && define.amd ? define(['jquery'], factory) :
-  (factory(global.$));
+  (global.clientSideValidations = factory(global.$));
 }(this, (function ($) { 'use strict';
 
   $ = $ && $.hasOwnProperty('default') ? $['default'] : $;
+
+  function acceptanceValidator (element, options) {
+    var ref = void 0;
+
+    switch (element.attr('type')) {
+      case 'checkbox':
+        if (!element.prop('checked')) {
+          return options.message;
+        }
+        break;
+      case 'text':
+        if (element.val() !== (((ref = options.accept) != null ? ref.toString() : void 0) || '1')) {
+          return options.message;
+        }
+    }
+  }
+
+  function formatValidator (element, options) {
+    var message = void 0;
+
+    message = this.presence(element, options);
+
+    if (message) {
+      if (options.allow_blank === true) {
+        return;
+      }
+      return message;
+    }
+
+    if (options.with && !new RegExp(options.with.source, options.with.options).test(element.val())) {
+      return options.message;
+    }
+
+    if (options.without && new RegExp(options.without.source, options.without.options).test(element.val())) {
+      return options.message;
+    }
+  }
+
+  function numericalityValidator (element, options) {
+    var $form = void 0,
+        CHECKS = void 0,
+        check = void 0,
+        checkValue = void 0,
+        fn = void 0,
+        numberFormat = void 0,
+        operator = void 0,
+        val = void 0;
+
+    if (options.allow_blank === true && this.presence(element, {
+      message: options.messages.numericality
+    })) {
+      return;
+    }
+
+    $form = $(element[0].form);
+    numberFormat = $form[0].ClientSideValidations.settings.number_format;
+    val = $.trim(element.val()).replace(new RegExp('\\' + numberFormat.separator, 'g'), '.');
+
+    if (options.only_integer && !ClientSideValidations$1.patterns.numericality.only_integer.test(val)) {
+      return options.messages.only_integer;
+    }
+
+    if (!ClientSideValidations$1.patterns.numericality['default'].test(val)) {
+      return options.messages.numericality;
+    }
+
+    CHECKS = {
+      greater_than: '>',
+      greater_than_or_equal_to: '>=',
+      equal_to: '==',
+      less_than: '<',
+      less_than_or_equal_to: '<='
+    };
+
+    for (check in CHECKS) {
+      operator = CHECKS[check];
+      if (!(options[check] != null)) {
+        continue;
+      }
+      checkValue = !isNaN(parseFloat(options[check])) && isFinite(options[check]) ? options[check] : $form.find('[name*=' + options[check] + ']').length === 1 ? $form.find('[name*=' + options[check] + ']').val() : void 0;
+      if (checkValue == null || checkValue === '') {
+        return;
+      }
+      fn = new Function('return ' + val + ' ' + operator + ' ' + checkValue); // eslint-disable-line no-new-func
+      if (!fn()) {
+        return options.messages[check];
+      }
+    }
+
+    if (options.odd && !(parseInt(val, 10) % 2)) {
+      return options.messages.odd;
+    }
+
+    if (options.even && parseInt(val, 10) % 2) {
+      return options.messages.even;
+    }
+  }
+
+  function presenceValidator (element, options) {
+    if (/^\s*$/.test(element.val() || '')) {
+      return options.message;
+    }
+  }
 
   var ClientSideValidations = void 0,
       initializeOnEvent = void 0,
@@ -367,92 +470,10 @@
             return options.message;
           }
         },
-        presence: function presence(element, options) {
-          if (/^\s*$/.test(element.val() || '')) {
-            return options.message;
-          }
-        },
-        acceptance: function acceptance(element, options) {
-          var ref = void 0;
-          switch (element.attr('type')) {
-            case 'checkbox':
-              if (!element.prop('checked')) {
-                return options.message;
-              }
-              break;
-            case 'text':
-              if (element.val() !== (((ref = options.accept) != null ? ref.toString() : void 0) || '1')) {
-                return options.message;
-              }
-          }
-        },
-        format: function format(element, options) {
-          var message = void 0;
-          message = this.presence(element, options);
-          if (message) {
-            if (options.allow_blank === true) {
-              return;
-            }
-            return message;
-          }
-          if (options['with'] && !new RegExp(options['with'].source, options['with'].options).test(element.val())) {
-            return options.message;
-          }
-          if (options.without && new RegExp(options.without.source, options.without.options).test(element.val())) {
-            return options.message;
-          }
-        },
-        numericality: function numericality(element, options) {
-          var $form = void 0,
-              CHECKS = void 0,
-              check = void 0,
-              checkValue = void 0,
-              fn = void 0,
-              numberFormat = void 0,
-              operator = void 0,
-              val = void 0;
-          if (options.allow_blank === true && this.presence(element, {
-            message: options.messages.numericality
-          })) {
-            return;
-          }
-          $form = $(element[0].form);
-          numberFormat = $form[0].ClientSideValidations.settings.number_format;
-          val = $.trim(element.val()).replace(new RegExp('\\' + numberFormat.separator, 'g'), '.');
-          if (options.only_integer && !ClientSideValidations.patterns.numericality.only_integer.test(val)) {
-            return options.messages.only_integer;
-          }
-          if (!ClientSideValidations.patterns.numericality['default'].test(val)) {
-            return options.messages.numericality;
-          }
-          CHECKS = {
-            greater_than: '>',
-            greater_than_or_equal_to: '>=',
-            equal_to: '==',
-            less_than: '<',
-            less_than_or_equal_to: '<='
-          };
-          for (check in CHECKS) {
-            operator = CHECKS[check];
-            if (!(options[check] != null)) {
-              continue;
-            }
-            checkValue = !isNaN(parseFloat(options[check])) && isFinite(options[check]) ? options[check] : $form.find('[name*=' + options[check] + ']').length === 1 ? $form.find('[name*=' + options[check] + ']').val() : void 0;
-            if (checkValue == null || checkValue === '') {
-              return;
-            }
-            fn = new Function('return ' + val + ' ' + operator + ' ' + checkValue); // eslint-disable-line no-new-func
-            if (!fn()) {
-              return options.messages[check];
-            }
-          }
-          if (options.odd && !(parseInt(val, 10) % 2)) {
-            return options.messages.odd;
-          }
-          if (options.even && parseInt(val, 10) % 2) {
-            return options.messages.even;
-          }
-        },
+        presence: presenceValidator,
+        acceptance: acceptanceValidator,
+        format: formatValidator,
+        numericality: numericalityValidator,
         length: function length(element, options) {
           var CHECKS = void 0,
               blankOptions = void 0,
@@ -640,5 +661,11 @@
   }
 
   window.ClientSideValidations = ClientSideValidations;
+
+  var ClientSideValidations$1 = {
+    ClientSideValidations: ClientSideValidations
+  };
+
+  return ClientSideValidations$1;
 
 })));

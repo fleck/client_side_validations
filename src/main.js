@@ -1,5 +1,10 @@
 import $ from 'jquery'
 
+import acceptanceValidator from './validators/acceptance'
+import formatValidator from './validators/format'
+import numericalityValidator from './validators/numericality'
+import presenceValidator from './validators/presence'
+
 let ClientSideValidations, initializeOnEvent, validateElement, validateForm, validatorsFor
 
 $.fn.disableClientSideValidations = function () {
@@ -315,85 +320,10 @@ ClientSideValidations = {
           return options.message
         }
       },
-      presence: (element, options) => {
-        if (/^\s*$/.test(element.val() || '')) {
-          return options.message
-        }
-      },
-      acceptance: (element, options) => {
-        let ref
-        switch (element.attr('type')) {
-          case 'checkbox':
-            if (!element.prop('checked')) {
-              return options.message
-            }
-            break
-          case 'text':
-            if (element.val() !== (((ref = options.accept) != null ? ref.toString() : void 0) || '1')) {
-              return options.message
-            }
-        }
-      },
-      format: function (element, options) {
-        let message
-        message = this.presence(element, options)
-        if (message) {
-          if (options.allow_blank === true) {
-            return
-          }
-          return message
-        }
-        if (options['with'] && !new RegExp(options['with'].source, options['with'].options).test(element.val())) {
-          return options.message
-        }
-        if (options.without && new RegExp(options.without.source, options.without.options).test(element.val())) {
-          return options.message
-        }
-      },
-      numericality: function (element, options) {
-        let $form, CHECKS, check, checkValue, fn, numberFormat, operator, val
-        if (options.allow_blank === true && this.presence(element, {
-          message: options.messages.numericality
-        })) {
-          return
-        }
-        $form = $(element[0].form)
-        numberFormat = $form[0].ClientSideValidations.settings.number_format
-        val = $.trim(element.val()).replace(new RegExp('\\' + numberFormat.separator, 'g'), '.')
-        if (options.only_integer && !ClientSideValidations.patterns.numericality.only_integer.test(val)) {
-          return options.messages.only_integer
-        }
-        if (!ClientSideValidations.patterns.numericality['default'].test(val)) {
-          return options.messages.numericality
-        }
-        CHECKS = {
-          greater_than: '>',
-          greater_than_or_equal_to: '>=',
-          equal_to: '==',
-          less_than: '<',
-          less_than_or_equal_to: '<='
-        }
-        for (check in CHECKS) {
-          operator = CHECKS[check]
-          if (!(options[check] != null)) {
-            continue
-          }
-          checkValue = !isNaN(parseFloat(options[check])) && isFinite(options[check]) ? options[check] : $form.find('[name*=' + options[check] + ']').length === 1 ? $form.find('[name*=' + options[check] + ']').val() : void 0
-          if ((checkValue == null) || checkValue === '') {
-            return
-          }
-          fn = new Function('return ' + val + ' ' + operator + ' ' + checkValue) // eslint-disable-line no-new-func
-          if (!fn()) {
-            return options.messages[check]
-          }
-        }
-        if (options.odd && !(parseInt(val, 10) % 2)) {
-          return options.messages.odd
-        }
-        if (options.even && (parseInt(val, 10) % 2)) {
-          return options.messages.even
-        }
-      },
+      presence: presenceValidator,
+      acceptance: acceptanceValidator,
+      format: formatValidator,
+      numericality: numericalityValidator,
       length: function (element, options) {
         let CHECKS, blankOptions, check, fn, message, operator, tokenizedLength, tokenizer
         tokenizer = options.js_tokenizer || "split('')"
@@ -557,3 +487,7 @@ if ((window.Turbolinks != null) && window.Turbolinks.supported) {
 }
 
 window.ClientSideValidations = ClientSideValidations
+
+export default {
+  ClientSideValidations
+}
