@@ -1,7 +1,7 @@
 import $ from 'jquery'
-import ClientSideValidations from '../main.js'
+import ClientSideValidations from '../ClientSideValidations'
 
-export default function (element, options) {
+ClientSideValidations.validators.numericality = function (element, options) {
   let $form, CHECKS, check, checkValue, fn, numberFormat, operator, val
 
   if (options.allow_blank === true && this.presence(element, {
