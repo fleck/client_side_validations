@@ -182,9 +182,9 @@ const ClientSideValidations = {
           return options.message
         }
       },
-      presence: presenceValidator,
-      acceptance: acceptanceValidator,
-      format: formatValidator,
+      // presence: presenceValidator,
+      // acceptance: acceptanceValidator,
+      // format: formatValidator,
       length: function (element, options) {
         let CHECKS, blankOptions, check, fn, message, operator, tokenizedLength, tokenizer
         tokenizer = options.js_tokenizer || "split('')"

@@ -10,259 +10,7 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 
 var $ = _interopDefault(require('jquery'));
 
-function acceptanceValidator (element, options) {
-  var ref = void 0;
-
-  switch (element.attr('type')) {
-    case 'checkbox':
-      if (!element.prop('checked')) {
-        return options.message;
-      }
-      break;
-    case 'text':
-      if (element.val() !== (((ref = options.accept) != null ? ref.toString() : void 0) || '1')) {
-        return options.message;
-      }
-  }
-}
-
-function formatValidator (element, options) {
-  var message = void 0;
-
-  message = this.presence(element, options);
-
-  if (message) {
-    if (options.allow_blank === true) {
-      return;
-    }
-    return message;
-  }
-
-  if (options.with && !new RegExp(options.with.source, options.with.options).test(element.val())) {
-    return options.message;
-  }
-
-  if (options.without && new RegExp(options.without.source, options.without.options).test(element.val())) {
-    return options.message;
-  }
-}
-
-function numericalityValidator (element, options) {
-  var $form = void 0,
-      CHECKS = void 0,
-      check = void 0,
-      checkValue = void 0,
-      fn = void 0,
-      numberFormat = void 0,
-      operator = void 0,
-      val = void 0;
-
-  if (options.allow_blank === true && this.presence(element, {
-    message: options.messages.numericality
-  })) {
-    return;
-  }
-
-  $form = $(element[0].form);
-  numberFormat = $form[0].ClientSideValidations.settings.number_format;
-  val = $.trim(element.val()).replace(new RegExp('\\' + numberFormat.separator, 'g'), '.');
-
-  if (options.only_integer && !ClientSideValidations$1.patterns.numericality.only_integer.test(val)) {
-    return options.messages.only_integer;
-  }
-
-  if (!ClientSideValidations$1.patterns.numericality['default'].test(val)) {
-    return options.messages.numericality;
-  }
-
-  CHECKS = {
-    greater_than: '>',
-    greater_than_or_equal_to: '>=',
-    equal_to: '==',
-    less_than: '<',
-    less_than_or_equal_to: '<='
-  };
-
-  for (check in CHECKS) {
-    operator = CHECKS[check];
-    if (!(options[check] != null)) {
-      continue;
-    }
-    checkValue = !isNaN(parseFloat(options[check])) && isFinite(options[check]) ? options[check] : $form.find('[name*=' + options[check] + ']').length === 1 ? $form.find('[name*=' + options[check] + ']').val() : void 0;
-    if (checkValue == null || checkValue === '') {
-      return;
-    }
-    fn = new Function('return ' + val + ' ' + operator + ' ' + checkValue); // eslint-disable-line no-new-func
-    if (!fn()) {
-      return options.messages[check];
-    }
-  }
-
-  if (options.odd && !(parseInt(val, 10) % 2)) {
-    return options.messages.odd;
-  }
-
-  if (options.even && parseInt(val, 10) % 2) {
-    return options.messages.even;
-  }
-}
-
-function presenceValidator (element, options) {
-  if (/^\s*$/.test(element.val() || '')) {
-    return options.message;
-  }
-}
-
-var ClientSideValidations = void 0,
-    initializeOnEvent = void 0,
-    validateElement = void 0,
-    validateForm = void 0,
-    validatorsFor = void 0;
-
-$.fn.disableClientSideValidations = function () {
-  ClientSideValidations.disable(this);
-  return this;
-};
-
-$.fn.enableClientSideValidations = function () {
-  this.filter(ClientSideValidations.selectors.forms).each(function () {
-    return ClientSideValidations.enablers.form(this);
-  });
-  this.filter(ClientSideValidations.selectors.inputs).each(function () {
-    return ClientSideValidations.enablers.input(this);
-  });
-  return this;
-};
-
-$.fn.resetClientSideValidations = function () {
-  this.filter(ClientSideValidations.selectors.forms).each(function () {
-    return ClientSideValidations.reset(this);
-  });
-  return this;
-};
-
-$.fn.validate = function () {
-  this.filter(ClientSideValidations.selectors.forms).each(function () {
-    return $(this).enableClientSideValidations();
-  });
-  return this;
-};
-
-$.fn.isValid = function (validators) {
-  var obj = void 0;
-  obj = $(this[0]);
-  if (obj.is('form')) {
-    return validateForm(obj, validators);
-  } else {
-    return validateElement(obj, validatorsFor(this[0].name, validators));
-  }
-};
-
-validatorsFor = function validatorsFor(name, validators) {
-  if (validators.hasOwnProperty(name)) {
-    return validators[name];
-  }
-  name = name.replace(/\[(\w+_attributes)\]\[[\da-z_]+\](?=\[(?:\w+_attributes)\])/g, '[$1][]');
-
-  var captures = name.match(/\[(\w+_attributes)\].*\[(\w+)\]$/);
-
-  if (captures) {
-    for (var validatorName in validators) {
-      if (validatorName.match('\\[' + captures[1] + '\\].*\\[\\]\\[' + captures[2] + '\\]$')) {
-        name = name.replace(/\[[\da-z_]+\]\[(\w+)\]$/g, '[][$1]');
-      }
-    }
-  }
-  return validators[name] || {};
-};
-
-validateForm = function validateForm(form, validators) {
-  form.trigger('form:validate:before.ClientSideValidations');
-  var valid = true;
-  form.find(ClientSideValidations.selectors.validate_inputs).each(function () {
-    if (!$(this).isValid(validators)) {
-      valid = false;
-    }
-    return true;
-  });
-  if (valid) {
-    form.trigger('form:validate:pass.ClientSideValidations');
-  } else {
-    form.trigger('form:validate:fail.ClientSideValidations');
-  }
-  form.trigger('form:validate:after.ClientSideValidations');
-  return valid;
-};
-
-validateElement = function validateElement(element, validators) {
-  var afterValidate = void 0,
-      destroyInputName = void 0,
-      executeValidators = void 0,
-      failElement = void 0,
-      local = void 0,
-      passElement = void 0,
-      remote = void 0;
-  element.trigger('element:validate:before.ClientSideValidations');
-  passElement = function passElement() {
-    return element.trigger('element:validate:pass.ClientSideValidations').data('valid', null);
-  };
-  failElement = function failElement(message) {
-    element.trigger('element:validate:fail.ClientSideValidations', message).data('valid', false);
-    return false;
-  };
-  afterValidate = function afterValidate() {
-    return element.trigger('element:validate:after.ClientSideValidations').data('valid') !== false;
-  };
-  executeValidators = function executeValidators(context) {
-    var fn = void 0,
-        i = void 0,
-        kind = void 0,
-        len = void 0,
-        ref = void 0,
-        valid = void 0,
-        validator = void 0;
-
-    valid = true;
-    for (kind in context) {
-      fn = context[kind];
-      if (validators[kind]) {
-        ref = validators[kind];
-        for (i = 0, len = ref.length; i < len; i++) {
-          validator = ref[i];
-
-          var message = fn.call(context, element, validator);
-          if (message) {
-            valid = failElement(message);
-            break;
-          }
-        }
-        if (!valid) {
-          break;
-        }
-      }
-    }
-    return valid;
-  };
-  if (element.attr('name').search(/\[([^\]]*?)\]$/) >= 0) {
-    destroyInputName = element.attr('name').replace(/\[([^\]]*?)\]$/, '[_destroy]');
-    if ($("input[name='" + destroyInputName + "']").val() === '1') {
-      passElement();
-      return afterValidate();
-    }
-  }
-  if (element.data('changed') === false) {
-    return afterValidate();
-  }
-  element.data('changed', false);
-  local = ClientSideValidations.validators.local;
-  remote = ClientSideValidations.validators.remote;
-  if (executeValidators(local) && executeValidators(remote)) {
-    passElement();
-  }
-  return afterValidate();
-};
-
-ClientSideValidations = {
+var ClientSideValidations = {
   callbacks: {
     element: {
       after: function after(element, eventData) {},
@@ -468,10 +216,9 @@ ClientSideValidations = {
           return options.message;
         }
       },
-      presence: presenceValidator,
-      acceptance: acceptanceValidator,
-      format: formatValidator,
-      numericality: numericalityValidator,
+      // presence: presenceValidator,
+      // acceptance: acceptanceValidator,
+      // format: formatValidator,
       length: function length(element, options) {
         var CHECKS = void 0,
             blankOptions = void 0,
@@ -647,6 +394,218 @@ ClientSideValidations = {
   }
 };
 
+ClientSideValidations.validators.numericality = function (element, options) {
+  var $form = void 0,
+      CHECKS = void 0,
+      check = void 0,
+      checkValue = void 0,
+      fn = void 0,
+      numberFormat = void 0,
+      operator = void 0,
+      val = void 0;
+
+  if (options.allow_blank === true && this.presence(element, {
+    message: options.messages.numericality
+  })) {
+    return;
+  }
+
+  $form = $(element[0].form);
+  numberFormat = $form[0].ClientSideValidations.settings.number_format;
+  val = $.trim(element.val()).replace(new RegExp('\\' + numberFormat.separator, 'g'), '.');
+
+  if (options.only_integer && !ClientSideValidations.patterns.numericality.only_integer.test(val)) {
+    return options.messages.only_integer;
+  }
+
+  if (!ClientSideValidations.patterns.numericality['default'].test(val)) {
+    return options.messages.numericality;
+  }
+
+  CHECKS = {
+    greater_than: '>',
+    greater_than_or_equal_to: '>=',
+    equal_to: '==',
+    less_than: '<',
+    less_than_or_equal_to: '<='
+  };
+
+  for (check in CHECKS) {
+    operator = CHECKS[check];
+    if (!(options[check] != null)) {
+      continue;
+    }
+    checkValue = !isNaN(parseFloat(options[check])) && isFinite(options[check]) ? options[check] : $form.find('[name*=' + options[check] + ']').length === 1 ? $form.find('[name*=' + options[check] + ']').val() : void 0;
+    if (checkValue == null || checkValue === '') {
+      return;
+    }
+    fn = new Function('return ' + val + ' ' + operator + ' ' + checkValue); // eslint-disable-line no-new-func
+    if (!fn()) {
+      return options.messages[check];
+    }
+  }
+
+  if (options.odd && !(parseInt(val, 10) % 2)) {
+    return options.messages.odd;
+  }
+
+  if (options.even && parseInt(val, 10) % 2) {
+    return options.messages.even;
+  }
+};
+
+// import acceptanceValidator from './validators/acceptance'
+// import formatValidator from './validators/format'
+// import presenceValidator from './validators/presence'
+
+var initializeOnEvent = void 0,
+    validateElement = void 0,
+    validateForm = void 0,
+    validatorsFor = void 0;
+
+$.fn.disableClientSideValidations = function () {
+  ClientSideValidations.disable(this);
+  return this;
+};
+
+$.fn.enableClientSideValidations = function () {
+  this.filter(ClientSideValidations.selectors.forms).each(function () {
+    return ClientSideValidations.enablers.form(this);
+  });
+  this.filter(ClientSideValidations.selectors.inputs).each(function () {
+    return ClientSideValidations.enablers.input(this);
+  });
+  return this;
+};
+
+$.fn.resetClientSideValidations = function () {
+  this.filter(ClientSideValidations.selectors.forms).each(function () {
+    return ClientSideValidations.reset(this);
+  });
+  return this;
+};
+
+$.fn.validate = function () {
+  this.filter(ClientSideValidations.selectors.forms).each(function () {
+    return $(this).enableClientSideValidations();
+  });
+  return this;
+};
+
+$.fn.isValid = function (validators) {
+  var obj = void 0;
+  obj = $(this[0]);
+  if (obj.is('form')) {
+    return validateForm(obj, validators);
+  } else {
+    return validateElement(obj, validatorsFor(this[0].name, validators));
+  }
+};
+
+validatorsFor = function validatorsFor(name, validators) {
+  if (validators.hasOwnProperty(name)) {
+    return validators[name];
+  }
+  name = name.replace(/\[(\w+_attributes)\]\[[\da-z_]+\](?=\[(?:\w+_attributes)\])/g, '[$1][]');
+
+  var captures = name.match(/\[(\w+_attributes)\].*\[(\w+)\]$/);
+
+  if (captures) {
+    for (var validatorName in validators) {
+      if (validatorName.match('\\[' + captures[1] + '\\].*\\[\\]\\[' + captures[2] + '\\]$')) {
+        name = name.replace(/\[[\da-z_]+\]\[(\w+)\]$/g, '[][$1]');
+      }
+    }
+  }
+  return validators[name] || {};
+};
+
+validateForm = function validateForm(form, validators) {
+  form.trigger('form:validate:before.ClientSideValidations');
+  var valid = true;
+  form.find(ClientSideValidations.selectors.validate_inputs).each(function () {
+    if (!$(this).isValid(validators)) {
+      valid = false;
+    }
+    return true;
+  });
+  if (valid) {
+    form.trigger('form:validate:pass.ClientSideValidations');
+  } else {
+    form.trigger('form:validate:fail.ClientSideValidations');
+  }
+  form.trigger('form:validate:after.ClientSideValidations');
+  return valid;
+};
+
+validateElement = function validateElement(element, validators) {
+  var afterValidate = void 0,
+      destroyInputName = void 0,
+      executeValidators = void 0,
+      failElement = void 0,
+      local = void 0,
+      passElement = void 0,
+      remote = void 0;
+  element.trigger('element:validate:before.ClientSideValidations');
+  passElement = function passElement() {
+    return element.trigger('element:validate:pass.ClientSideValidations').data('valid', null);
+  };
+  failElement = function failElement(message) {
+    element.trigger('element:validate:fail.ClientSideValidations', message).data('valid', false);
+    return false;
+  };
+  afterValidate = function afterValidate() {
+    return element.trigger('element:validate:after.ClientSideValidations').data('valid') !== false;
+  };
+  executeValidators = function executeValidators(context) {
+    var fn = void 0,
+        i = void 0,
+        kind = void 0,
+        len = void 0,
+        ref = void 0,
+        valid = void 0,
+        validator = void 0;
+
+    valid = true;
+    for (kind in context) {
+      fn = context[kind];
+      if (validators[kind]) {
+        ref = validators[kind];
+        for (i = 0, len = ref.length; i < len; i++) {
+          validator = ref[i];
+
+          var message = fn.call(context, element, validator);
+          if (message) {
+            valid = failElement(message);
+            break;
+          }
+        }
+        if (!valid) {
+          break;
+        }
+      }
+    }
+    return valid;
+  };
+  if (element.attr('name').search(/\[([^\]]*?)\]$/) >= 0) {
+    destroyInputName = element.attr('name').replace(/\[([^\]]*?)\]$/, '[_destroy]');
+    if ($("input[name='" + destroyInputName + "']").val() === '1') {
+      passElement();
+      return afterValidate();
+    }
+  }
+  if (element.data('changed') === false) {
+    return afterValidate();
+  }
+  element.data('changed', false);
+  local = ClientSideValidations.validators.local;
+  remote = ClientSideValidations.validators.remote;
+  if (executeValidators(local) && executeValidators(remote)) {
+    passElement();
+  }
+  return afterValidate();
+};
+
 if (window.Turbolinks != null && window.Turbolinks.supported) {
   initializeOnEvent = window.Turbolinks.EVENTS != null ? 'page:change' : 'turbolinks:load';
   $(document).on(initializeOnEvent, function () {
@@ -660,8 +619,8 @@ if (window.Turbolinks != null && window.Turbolinks.supported) {
 
 window.ClientSideValidations = ClientSideValidations;
 
-var ClientSideValidations$1 = {
+var main = {
   ClientSideValidations: ClientSideValidations
 };
 
-module.exports = ClientSideValidations$1;
+module.exports = main;
